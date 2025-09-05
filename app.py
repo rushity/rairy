@@ -18,7 +18,7 @@ import requests
 import json
 import os
 from typing import Optional, List
-
+from collections.abc import Iterator, AsyncIterator  # ✅ FIXED
 
 # ------------------ Config ------------------
 DATA_DIR = "data"                 # folder with your PDFs/TXT/MD/etc.
@@ -31,7 +31,7 @@ app.secret_key = "supersecretkey"  # needed for sessions
 # ✅ Your OpenRouter API key
 OPENROUTER_API_KEY = os.getenv(
     "OPENROUTER_API_KEY",
-    "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",
+    "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",  # replace with your key
 )
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -179,7 +179,6 @@ def clean_answer(text: str) -> str:
     """Strip common model control tokens and whitespace."""
     if not isinstance(text, str):
         text = str(text)
-    # tokens/models may use different markers — this covers common ones
     bad_tokens = [
         "<|start|>", "<|end|>", "<|assistant|>", "<|channel|>", "<|message|>",
         "|start|", "|end|", "final"
@@ -218,8 +217,6 @@ def home():
     return render_template("index.html", chat_history=session["chat_history"])
 
 
-
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render sets PORT
     app.run(host="0.0.0.0", port=port)
-
