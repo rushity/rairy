@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Local AI Chat</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <h1>🤖 Rushit's AI Chat</h1>
+
+        <div class="chat-box">
+            {% for chat in chat_history %}
+                <div class="chat-message user">
+                    <p><strong>You:</strong> {{ chat.q }}</p>
+                </div>
+                <div class="chat-message ai">
+                    <p><strong>RAI:</strong> {{ chat.a }}</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <form method="post" class="input-box">
+            <input type="text" name="question" placeholder="Type your message..." required>
+            <button type="submit">Send</button>
+        </form>
+    </div>
+</body>
+</html>

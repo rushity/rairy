@@ -1,0 +1,23 @@
+flask==3.0.3
+gunicorn==23.0.0
+requests==2.32.3
+
+# LlamaIndex stack (aligned to 0.11.x)
+llama-index==0.11.10
+llama-index-core==0.11.10
+llama-index-embeddings-huggingface==0.3.1
+
+# HuggingFace + NLP
+sentence-transformers==3.0.1
+torch==2.5.1
+transformers==4.44.2
+huggingface-hub==0.23.5
+tokenizers==0.19.1
+regex==2024.9.11
+
+# Rust-compiled packages pinned to wheels
+orjson==3.10.7
+pydantic-core==2.23.4
+
+# Utils
+typing-extensions==4.12.2
