@@ -18,25 +18,27 @@ import requests
 import json
 import os
 from typing import Optional, List
-from collections.abc import Iterator, AsyncIterator  # ✅ FIXED
+from collections.abc import Iterator, AsyncIterator
+from functools import lru_cache  # ✅ for lazy loading
 
 # ------------------ Config ------------------
-DATA_DIR = "data"                 # folder with your PDFs/TXT/MD/etc.
-PERSIST_DIR = "storage"           # where the index will be saved
-CHECK_FILE = os.path.join(PERSIST_DIR, ".last_built")  # timestamp cache
+DATA_DIR = "data"
+PERSIST_DIR = "storage"
+CHECK_FILE = os.path.join(PERSIST_DIR, ".last_built")
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # needed for sessions
+app.secret_key = "supersecretkey"
 
 # ✅ Your OpenRouter API key
 OPENROUTER_API_KEY = os.getenv(
     "OPENROUTER_API_KEY",
-    "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",  # replace with your key
+    "replace-with-your-key",  # ⚠️ better not hardcode here
 )
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # ✅ Model you want to use
 MODEL = "openai/gpt-oss-120b:free"
+
 
 # ------------------ Custom LLM backed by OpenRouter ------------------
 class OpenRouterLLM(LLM):
@@ -54,7 +56,6 @@ class OpenRouterLLM(LLM):
             model_name=self.model,
         )
 
-    # ---- helpers ----
     def _post(self, messages: List[ChatMessage]) -> dict:
         payload = {
             "model": self.model,
@@ -76,7 +77,6 @@ class OpenRouterLLM(LLM):
             raise RuntimeError(f"OpenRouter {resp.status_code}: {resp.text}")
         return resp.json()
 
-    # ---- required sync APIs ----
     def chat(self, messages: List[ChatMessage], **kwargs) -> ChatResponse:
         data = self._post(messages)
         content = data["choices"][0]["message"]["content"]
@@ -94,7 +94,6 @@ class OpenRouterLLM(LLM):
     def stream_complete(self, prompt: str, **kwargs) -> Iterator[CompletionResponse]:
         yield self.complete(prompt, **kwargs)
 
-    # ---- required async APIs ----
     async def achat(self, messages: List[ChatMessage], **kwargs) -> ChatResponse:
         return self.chat(messages, **kwargs)
 
@@ -107,13 +106,21 @@ class OpenRouterLLM(LLM):
     async def astream_complete(self, prompt: str, **kwargs) -> AsyncIterator[CompletionResponse]:
         yield self.complete(prompt, **kwargs)
 
+
 # ------------------ LLM + Embeddings ------------------
-Settings.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+# ✅ Lazy load embedding model (saves memory on Render free plan)
+@lru_cache(maxsize=1)
+def get_embed_model():
+    return HuggingFaceEmbedding(model_name="sentence-transformers/paraphrase-MiniLM-L3-v2")
+
+Settings.embed_model = get_embed_model()
 Settings.llm = OpenRouterLLM()
 
 # ------------------ Globals ------------------
 _index: Optional[VectorStoreIndex] = None
 _query_engine = None
+
 
 # ------------------ Helpers ------------------
 def _latest_mtime(folder: str) -> float:
@@ -125,6 +132,7 @@ def _latest_mtime(folder: str) -> float:
         return 0.0
     return max(os.path.getmtime(p) for p in files)
 
+
 def _read_cached_build_time() -> float:
     if not os.path.exists(CHECK_FILE):
         return 0.0
@@ -134,10 +142,12 @@ def _read_cached_build_time() -> float:
     except Exception:
         return 0.0
 
+
 def _write_cached_build_time(ts: float) -> None:
     os.makedirs(PERSIST_DIR, exist_ok=True)
     with open(CHECK_FILE, "w") as f:
         f.write(str(ts))
+
 
 def _build_and_persist_index() -> VectorStoreIndex:
     print("🔄 Rebuilding index (embedding documents)…")
@@ -148,9 +158,11 @@ def _build_and_persist_index() -> VectorStoreIndex:
     print("✅ Index built & persisted.")
     return index
 
+
 def _load_index_from_disk() -> VectorStoreIndex:
     storage_context = StorageContext.from_defaults(persist_dir=PERSIST_DIR)
     return load_index_from_storage(storage_context)
+
 
 def get_index_and_engine():
     global _index, _query_engine
@@ -174,9 +186,9 @@ def get_index_and_engine():
     _query_engine = _index.as_query_engine(response_mode="compact")
     return _index, _query_engine
 
+
 # ------------------ Response cleaning ------------------
 def clean_answer(text: str) -> str:
-    """Strip common model control tokens and whitespace."""
     if not isinstance(text, str):
         text = str(text)
     bad_tokens = [
@@ -186,6 +198,7 @@ def clean_answer(text: str) -> str:
     for token in bad_tokens:
         text = text.replace(token, "")
     return text.strip()
+
 
 # ------------------ Routes ------------------
 @app.route("/", methods=["GET", "POST"])
@@ -216,6 +229,7 @@ def home():
 
     return render_template("index.html", chat_history=session["chat_history"])
 
-if __name__ == "__main__":
-    app.run(debug=True)
 
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))  # ✅ required for Render
+    app.run(host="0.0.0.0", port=port)
