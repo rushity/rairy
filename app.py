@@ -17,7 +17,7 @@ from llama_index.core.llms import (
 import requests
 import json
 import os
-from typing import Optional, List, Iterator, AsyncIterator
+from typing import Optional
 
 # ------------------ Config ------------------
 DATA_DIR = "data"                 # folder with your PDFs/TXT/MD/etc.
