@@ -188,11 +188,6 @@ def clean_answer(text: str) -> str:
     return text.strip()
 
 # ------------------ Routes ------------------
-
-@app.route("/ping")
-def ping():
-    return "Pong!"
-
 @app.route("/", methods=["GET", "POST"])
 def home():
     index, query_engine = get_index_and_engine()
