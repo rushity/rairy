@@ -32,7 +32,7 @@ app.secret_key = "supersecretkey"
 # ✅ Your OpenRouter API key
 OPENROUTER_API_KEY = os.getenv(
     "OPENROUTER_API_KEY",
-    "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",  # ⚠️ better not hardcode here
+    "sk-or-xxxxxx",  # ⚠️ don’t hardcode real key here in production
 )
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -60,7 +60,7 @@ class OpenRouterLLM(LLM):
         payload = {
             "model": self.model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
-            "max_tokens": 512
+            "max_tokens": 512,
         }
         resp = requests.post(
             API_URL,
@@ -114,8 +114,6 @@ class OpenRouterLLM(LLM):
 def get_embed_model():
     return HuggingFaceEmbedding(model_name="sentence-transformers/paraphrase-MiniLM-L3-v2")
 
-Settings.embed_model = get_embed_model()
-Settings.llm = OpenRouterLLM()
 
 # ------------------ Globals ------------------
 _index: Optional[VectorStoreIndex] = None
@@ -166,6 +164,11 @@ def _load_index_from_disk() -> VectorStoreIndex:
 
 def get_index_and_engine():
     global _index, _query_engine
+
+    # ✅ Initialize models only when first request comes in
+    Settings.embed_model = get_embed_model()
+    Settings.llm = OpenRouterLLM()
+
     data_mtime = _latest_mtime(DATA_DIR)
     cached_mtime = _read_cached_build_time()
 
@@ -193,7 +196,7 @@ def clean_answer(text: str) -> str:
         text = str(text)
     bad_tokens = [
         "<|start|>", "<|end|>", "<|assistant|>", "<|channel|>", "<|message|>",
-        "|start|", "|end|", "final"
+        "|start|", "|end|", "final",
     ]
     for token in bad_tokens:
         text = text.replace(token, "")
