@@ -32,7 +32,7 @@ app.secret_key = "supersecretkey"
 # ✅ Your OpenRouter API key
 OPENROUTER_API_KEY = os.getenv(
     "OPENROUTER_API_KEY",
-    "replace-with-your-key",  # ⚠️ better not hardcode here
+    "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",  # ⚠️ better not hardcode here
 )
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
